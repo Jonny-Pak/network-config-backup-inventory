@@ -1,3 +1,0 @@
-set system host-name J1
-set interfaces ge-0/0/0 unit 0 family inet address 192.168.56.13/24
-set system services ssh

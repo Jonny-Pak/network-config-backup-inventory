@@ -1,53 +1,42 @@
-# Network Backup & Inventory — GNS3 Lab
+# Network Configuration Backup & Inventory – Network Lab
 
-This is a read-only SSH backup baseline for authorized lab devices. Supported Netmiko platform types: `cisco_ios`, `juniper_junos`.
+**Môn học:** Quản trị mạng nâng cao  
+**Đề tài:** Tự động hóa thu thập và sao lưu cấu hình Cisco/Juniper sử dụng Netmiko/Paramiko, phân tích diff và lưu trữ Git.  
+**Phần bàn giao này:** Thành viên 1 – Hạ tầng GNS3/VMware/Cisco.
 
-## Ubuntu setup
+## Hiện trạng kiểm thử (14/10/2026)
 
-```bash
-sudo apt update && sudo apt install -y python3-venv git
-python3 -m venv .venv
-source .venv/bin/activate
-pip install -r requirements.txt
-cp .env.example .env
-# edit .env locally, never commit it
-# edit devices.yaml to match your actual management topology
-git init
-git config user.name "Network Lab"
-git config user.email "lab@example.invalid"
-python backup.py --demo
-python backup.py       # after SSH reachability & credentials are ready
-```
+- Hai router Cisco c3725 (IOS 12.4) hoạt động trong GNS3.
+- IP quản trị: `192.168.36.11` (R1) và `192.168.36.12` (R2).
+- Windows VMnet1: `192.168.36.1/24`, GNS3 VM eth0: `192.168.36.128/24`.
+- Windows SSH thành công vào R1 và R2 bằng tài khoản `backupuser` (không lưu mật khẩu vào repository).
+- Python Netmiko kết nối R1, lấy `show version` thành công; script backup chạy thành công hai thiết bị và tạo file `.cfg`.
+- Chưa có thiết bị Juniper trong topology thực nghiệm hiện tại.
 
-On Windows PowerShell, use `py -m venv .venv`, `.venv\Scripts\Activate.ps1`, then the same pip and Python commands. Copy `.env.example` to `.env` manually or use `Copy-Item`.
+## Tài liệu
 
-## View results
+- [Địa chỉ IP và sơ đồ mạng](network/ip-addressing.md)
+- [Các bước dựng lab / cấu hình SSH / kiểm tra](network/network-setup.md)
+- [Inventory YAML](config/devices.yaml)
+- [Checklist nghiệm thu và bàn giao](docs/handover-checklist.md)
+- `network/gns3-topology/`: đặt file **project GNS3 đã kiểm tra không chứa image, secrets** hoặc ảnh chụp topology ở đây; hiện chưa có file project gốc vì chưa được cung cấp.
 
-- `configs/R1-CISCO.cfg`: latest sanitized snapshot
-- `diffs/R1-CISCO.diff`: diff between last and current run (only rewritten when changed)
-- `reports/report_*.json` and `.csv`: per-run status, ignored by Git
-- `git log --oneline` / `git show HEAD` / `git diff HEAD~1 HEAD -- configs/`
+## Cách sử dụng với mã nguồn của nhóm
 
-## Demo diff
+1. Cài Python và tạo `.venv` bằng `python -m venv .venv`.
+2. Cài Netmiko trong `.venv`; thử Paramiko 3.x cho IOS 12.4 nếu Paramiko mới gây lỗi KEX.
+3. Thành viên 2 bổ sung module load `config/devices.yaml`, không hard-code danh sách trong `backup.py`.
+4. Chạy thử trên mạng host-only; giữ secret trong `.env` (không commit) hoặc nhập tương tác.
+5. Không đẩy các file cấu hình router thực tế trong `backups/` lên GitHub khi chưa có redaction/kiểm soát truy cập.
 
-1. Run `python backup.py --demo`.
-2. Edit `samples/cisco.txt` and add `description DEMO-CHANGE` under an interface.
-3. Re-run `python backup.py --demo`.
-4. Inspect `diffs/R1-CISCO.diff` and `git log --oneline`.
+## Phân công
 
-## Scheduling (Ubuntu)
+| Người | Trách nhiệm |
+|---|---|
+| TV1 | GNS3, VMware, c3725, IP/SSH, topology và tài liệu mạng |
+| TV2 | Python, Inventory parser, Netmiko, backup nhiều thiết bị |
+| TV3 | Diff, Git commit, scheduler, báo cáo và kiểm thử tích hợp |
 
-Use `crontab -e` to set a daily task (replace `<PROJECT_PATH>` with an absolute path):
+## GitHub
 
-```cron
-0 2 * * * cd <PROJECT_PATH> && <PROJECT_PATH>/.venv/bin/python <PROJECT_PATH>/backup.py >> <PROJECT_PATH>/backup.log 2>&1
-```
-
-## Security / limitations
-
-- Run against your own or authorized devices only; never commit `.env`.
-- The sample redaction is intentionally basic, may miss vendor-specific credentials or keys. Audit it before using real configurations or pushing to remote Git. Keep Git repository private and filesystem access restricted. Historic Git commits retain information unless history is rewritten; avoid pushing raw configuration snapshots.
-- This is a starter, not a complete CMDB. `version` is recorded in the per-run report (first three lines of `show version`), not permanently in a database.
-- `diffs/` tracks only the most recent changed comparison for each device. Git keeps earlier versions.
-- No automatic SSH host key pinning implemented; use only within isolated, trusted lab networks. Harden host key verification for production.
-- The sample cisco.txt is used for both Cisco devices and is synthetic; no real device has been contacted by --demo.
+Dùng nhánh `feature/gns3-network` để gửi Pull Request vào `main`. Không commit `.venv`, mật khẩu, file backup gốc, Cisco image hoặc máy ảo. Đảm bảo xem `git status` và `git diff --cached` trước khi push.

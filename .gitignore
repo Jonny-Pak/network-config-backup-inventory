@@ -1,6 +1,31 @@
-.env
+# Python
 .venv/
+venv/
 __pycache__/
-.pytest_cache/
-reports/
+*.pyc
+
+# Credentials
+.env
+.env.*
+!.env.example
+*.pem
+*.key
+
+# Actual backup files
+backups/
 *.log
+
+# Virtual machines and Cisco images
+*.qcow2
+*.vmdk
+*.vdi
+*.bin
+*.image
+
+# GNS3 runtime data
+project-files/
+*.gns3project
+
+# Temporary files
+.vscode/
+.pytest_cache/

@@ -4,19 +4,10 @@ from getpass import getpass
 from pathlib import Path
 from datetime import datetime
 
+from inventory import load_inventory
+
 # Danh sách thiết bị cần backup
-devices = [
-    {
-        "name": "R1-CISCO",
-        "host": "192.168.36.11",
-        "device_type": "cisco_ios",
-    },
-    {
-        "name": "R2-CISCO",
-        "host": "192.168.36.12",
-        "device_type": "cisco_ios",
-    },
-]
+devices = load_inventory()
 
 # Thư mục lưu file backup
 backup_dir = Path("backups")

@@ -5,11 +5,13 @@ devices:
     device_type: cisco_ios
     port: 22
     vendor: Cisco
-    model: 3725
+    model: "3725"
+    location: GNS3-LAB
 
   - name: R2-CISCO
     host: 192.168.36.12
     device_type: cisco_ios
     port: 22
     vendor: Cisco
-    model: 3725
+    model: "3725"
+    location: GNS3-LAB

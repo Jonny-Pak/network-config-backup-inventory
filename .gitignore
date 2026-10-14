@@ -29,3 +29,8 @@ project-files/
 # Temporary files
 .vscode/
 .pytest_cache/
+
+logs/
+backups/
+.env
+.venv/

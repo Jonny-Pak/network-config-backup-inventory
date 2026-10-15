@@ -1,36 +1,66 @@
-# Python
+
+# ==========================================
+# Network Configuration Backup & Inventory
+# ==========================================
+
+# 1. Python virtual environments
 .venv/
 venv/
-__pycache__/
-*.pyc
+env/
 
-# Credentials
+# 2. Python cache and build files
+__pycache__/
+*.py[cod]
+.pytest_cache/
+.mypy_cache/
+.coverage
+htmlcov/
+build/
+dist/
+*.egg-info/
+
+# 3. Credentials and sensitive files
 .env
 .env.*
 !.env.example
 *.pem
 *.key
+*.p12
+*.pfx
 
-# Actual backup files
-backups/
+# 4. Network backup configurations
+/backups/
+
+# 5. Private Git configuration history
+/config_history/
+
+# 6. Generated CSV reports
+/reports/
+
+# 7. Application logs
+/logs/
 *.log
 
-# Virtual machines and Cisco images
+# 8. VMware and virtual machine files
 *.qcow2
 *.vmdk
 *.vdi
+
+# 9. Cisco IOS images
 *.bin
 *.image
 
-# GNS3 runtime data
+# 10. GNS3 runtime files
 project-files/
 *.gns3project
 
-# Temporary files
+# 11. Editor and IDE files
 .vscode/
-.pytest_cache/
+.idea/
 
-logs/
-backups/
-.env
-.venv/
+# 12. Temporary files
+*.tmp
+*.temp
+*.bak
+Thumbs.db
+.DS_Store

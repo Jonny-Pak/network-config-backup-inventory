@@ -75,7 +75,7 @@ class BackupManagerTests(unittest.TestCase):
         )
 
         self.assertEqual(result["status"], "failed")
-        self.assertIn("SSH timeout", result["error"])
+        self.assertEqual("RuntimeError", result["error"])
 
     @patch("backup_manager.backup_device")
     def test_backup_all(self, mock_backup):

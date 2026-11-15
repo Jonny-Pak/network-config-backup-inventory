@@ -30,6 +30,9 @@ dist/
 
 # 4. Network backup configurations
 /backups/
+/demo/
+/validation/
+/.backup.lock
 
 # 5. Private Git configuration history
 /config_history/

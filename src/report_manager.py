@@ -2,6 +2,24 @@
 import csv
 from datetime import datetime
 from pathlib import Path
+import json
+import os
+import tempfile
+
+
+def write_json(path, data):
+    """Publish a whole JSON document atomically for dashboard readers."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, encoding="utf-8", delete=False, suffix=".tmp") as file:
+            temporary = Path(file.name)
+            json.dump(data, file, ensure_ascii=False, indent=2)
+        os.replace(temporary, path)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
 
 
 def export_csv_report(records, report_dir="reports"):

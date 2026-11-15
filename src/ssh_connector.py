@@ -1,7 +1,12 @@
 
 import os
+import sys
 from contextlib import contextmanager
 from getpass import getpass
+try:
+    from .security import validate_target, netmiko_security_options
+except ImportError:
+    from security import validate_target, netmiko_security_options
 
 from netmiko import ConnectHandler
 from netmiko.exceptions import (
@@ -12,6 +17,8 @@ from netmiko.exceptions import (
 
 def get_credentials():
     """Lấy thông tin SSH, không lưu mật khẩu trong source code."""
+    if not sys.stdin.isatty() and not (os.getenv("NET_USERNAME") and os.getenv("NET_PASSWORD")):
+        raise ValueError("Set NET_USERNAME and NET_PASSWORD in .env for unattended backup")
     username = os.getenv("NET_USERNAME") or input(
         "SSH username [backupuser]: "
     ).strip() or "backupuser"
@@ -31,17 +38,21 @@ def ssh_connection(device, username, password):
     """Kết nối SSH và tự đóng phiên khi hoàn thành."""
     connection_info = {
         "device_type": device["device_type"],
-        "host": device["host"],
+        "host": validate_target(device["host"]),
         "port": device.get("port", 22),
         "username": username,
         "password": password,
+        "secret": os.getenv("NET_SECRET", ""),
         "conn_timeout": 15,
         "auth_timeout": 20,
         "banner_timeout": 20,
     }
+    connection_info.update(netmiko_security_options())
 
     try:
         with ConnectHandler(**connection_info) as connection:
+            if device["device_type"] == "cisco_ios" and os.getenv("NET_SECRET"):
+                connection.enable()
             yield connection
     except NetmikoAuthenticationException as error:
         raise RuntimeError(

@@ -1,6 +1,10 @@
 
 import subprocess
 from pathlib import Path
+try:
+    from .backup_manager import prepare_config
+except ImportError:
+    from backup_manager import prepare_config
 
 
 class GitManager:
@@ -60,26 +64,22 @@ class GitManager:
 
         destination = self.repo_dir / f"{device_name}.cfg"
 
-        new_content = source.read_bytes()
-
-        if (
-            destination.exists()
-            and destination.read_bytes() == new_content
-        ):
-            return {
-                "device": device_name,
-                "status": "UNCHANGED",
-                "commit": None
-            }
+        new_content = prepare_config(source.read_text(encoding="utf-8"))[0].encode("utf-8")
 
         destination.write_bytes(new_content)
 
         self._git("add", "--", destination.name)
+        # Compare to HEAD rather than the working file: retry a previously
+        # failed commit even when its snapshot was already written to disk.
+        if not self._git("diff", "--cached", "--name-only", "--", destination.name):
+            return {"device": device_name, "status": "UNCHANGED", "commit": None}
 
         self._git(
             "commit",
+            "--only",
             "-m",
-            f"Backup configuration: {device_name}"
+            f"Backup configuration: {device_name}",
+            "--", destination.name
         )
 
         commit_hash = self._git("rev-parse", "HEAD")

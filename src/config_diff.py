@@ -1,6 +1,10 @@
 
 from pathlib import Path
 import difflib
+try:
+    from .backup_manager import prepare_config
+except ImportError:
+    from backup_manager import prepare_config
 
 
 def compare_configs(old_file, new_file):
@@ -15,13 +19,9 @@ def compare_configs(old_file, new_file):
     if not new_path.is_file():
         raise FileNotFoundError(f"Không tìm thấy: {new_path}")
 
-    old_lines = old_path.read_text(
-        encoding="utf-8"
-    ).splitlines(keepends=True)
+    old_lines = prepare_config(old_path.read_text(encoding="utf-8"))[0].splitlines(keepends=True)
 
-    new_lines = new_path.read_text(
-        encoding="utf-8"
-    ).splitlines(keepends=True)
+    new_lines = prepare_config(new_path.read_text(encoding="utf-8"))[0].splitlines(keepends=True)
 
     diff = difflib.unified_diff(
         old_lines,

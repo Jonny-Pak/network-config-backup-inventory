@@ -4,6 +4,18 @@
 
 Ứng dụng Python giúp quản lý danh sách thiết bị, sao lưu cấu hình qua SSH, phát hiện thay đổi và lưu lịch sử bằng Git. Dự án phục vụ thực hành tự động hóa quản trị mạng với mô hình Cisco IOS trên GNS3.
 
+**Bản nâng cấp đã tích hợp:** scheduler, dashboard Streamlit, lọc secret trước khi lưu, kiểm tra IP/SSH host key, lệnh riêng cho Juniper và demo offline tách biệt. Xem [INTEGRATION.md — hướng dẫn chạy đầy đủ](INTEGRATION.md).
+
+Chạy thử không cần router:
+
+```powershell
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
+.\.venv\Scripts\python.exe -X utf8 -m src.scheduler --once --demo
+.\.venv\Scripts\python.exe -m streamlit run dashboard.py --server.address 127.0.0.1
+```
+
+Mở http://localhost:8501, chọn **Demo**. Chạy thật cần `.env`, allowlist và SSH host key đã xác minh; các bước bên dưới phải được thực hiện cùng hướng dẫn bảo mật trong INTEGRATION.md.
+
 ## Thành viên nhóm
 
 | STT | Họ và tên | Mã số sinh viên |
@@ -30,11 +42,14 @@
 | Chức năng | Mô tả |
 | --- | --- |
 | Quản lý thiết bị | Đọc danh sách từ YAML; kiểm tra tên, địa chỉ IP, loại thiết bị và cổng SSH; phát hiện tên hoặc địa chỉ kết nối trùng lặp. |
-| Sao lưu qua SSH | Sử dụng Netmiko để thu thập cấu hình bằng lệnh `show running-config`. |
+| Sao lưu qua SSH | Netmiko dùng lệnh riêng Cisco IOS / Juniper Junos, kiểm tra IP allowlist và host key. |
 | Xử lý song song | Sao lưu nhiều thiết bị bằng `ThreadPoolExecutor`; chương trình chính sử dụng tối đa 3 luồng. |
 | So sánh cấu hình | So sánh hai bản sao lưu gần nhất và hiển thị các dòng thay đổi bằng `difflib`. |
 | Lưu lịch sử | Tự tạo kho Git cục bộ cho cấu hình; chỉ tạo commit khi nội dung khác phiên bản đã lưu. |
-| Báo cáo và nhật ký | Xuất kết quả theo thiết bị ra CSV và ghi nhật ký hoạt động, lỗi kết nối. |
+| Báo cáo | Xuất kết quả theo thiết bị ra CSV/JSON, lưu trạng thái diff/Git và loại lỗi. |
+| Lập lịch | APScheduler chạy hằng ngày theo múi giờ, timeout và khóa chống trùng lượt. |
+| Dashboard | Streamlit xem trạng thái và kích hoạt backup Demo hoặc thiết bị thật; chế độ thật yêu cầu xác nhận allowlist/SSH host key và có thể dùng thông tin xác thực nhập theo phiên hoặc `.env`. |
+| Lọc secret | Che thông tin nhạy cảm trước khi lưu backup, diff và Git. |
 
 **Công nghệ:** Python, Netmiko, PyYAML, Git và các thư viện chuẩn của Python (`concurrent.futures`, `difflib`, `csv`, `logging`, `unittest`).
 
@@ -94,7 +109,7 @@ Các lệnh dưới đây sử dụng **PowerShell trên Windows** và được 
 git clone --branch develop https://github.com/Jonny-Pak/network-config-backup-inventory.git
 cd network-config-backup-inventory
 python -m venv .venv
-.\.venv\Scripts\python.exe -m pip install netmiko PyYAML
+.\.venv\Scripts\python.exe -m pip install -r requirements.txt
 git --version
 ```
 
@@ -145,13 +160,15 @@ Test-NetConnection 192.168.36.12 -Port 22
 
 ### 5. Chạy chương trình
 
+Trước khi chạy thật, sao chép `.env.example` thành `.env`, đặt `BACKUP_ALLOWED_CIDRS` và xác minh fingerprint/đăng ký key vào known_hosts theo [INTEGRATION.md](INTEGRATION.md). Chạy lịch tự động bằng `python -m src.scheduler`; scheduler cần thông tin đăng nhập trong `.env` hoặc biến môi trường.
+
 ```powershell
-.\.venv\Scripts\python.exe .\src\main.py
+.\.venv\Scripts\python.exe -X utf8 -m src.main
 ```
 
 Chương trình hiển thị danh sách thiết bị và yêu cầu nhập tên đăng nhập, mật khẩu SSH. Một bộ thông tin đăng nhập được sử dụng cho các thiết bị trong lần chạy đó.
 
-Sau khi hoàn tất, màn hình hiển thị kết quả sao lưu, thay đổi cấu hình, kết quả lưu Git và đường dẫn báo cáo CSV. Nếu có thiết bị sao lưu thất bại, chương trình kết thúc với mã lỗi `1`.
+Sau khi hoàn tất, màn hình hiển thị kết quả từng thiết bị và đường dẫn báo cáo JSON/CSV. Mã lỗi `1` báo lỗi backup/diff/Git/báo cáo; mã `2` báo đã có một lượt chạy khác.
 
 ## Kết quả và lịch sử cấu hình
 
@@ -159,10 +176,11 @@ Sau khi hoàn tất, màn hình hiển thị kết quả sao lưu, thay đổi c
 
 | Thư mục | Nội dung |
 | --- | --- |
-| `backups/` | Bản sao lưu theo thiết bị và thời điểm, ví dụ `R1-CISCO_20261019_143000.cfg`. |
+| `backups/` | Bản đã lọc secret theo thiết bị và thời điểm, timestamp có microsecond. |
 | `config_history/` | Kho Git cục bộ riêng, lưu cấu hình hiện tại của từng thiết bị trong tệp `<tên-thiết-bị>.cfg`. |
-| `reports/` | Báo cáo `network_report_<thời-gian>.csv`, mã hóa UTF-8 có BOM để hỗ trợ Excel. |
-| `logs/` | Nhật ký hoạt động của chương trình. |
+| `reports/` | CSV UTF-8 BOM, `latest.json`, lịch sử `run_*.json` và `scheduler_status.json`. |
+| `demo/` | Dữ liệu offline riêng, gồm backups, config_history và reports. |
+| `logs/` | Nhật ký JSON từng lượt, chỉ gồm dữ liệu và lỗi đã xử lý. |
 
 ### Trạng thái so sánh cấu hình
 
@@ -245,20 +263,18 @@ Các nhóm kiểm thử bao gồm: kiểm tra danh sách thiết bị, quản l�
 
 ## Bảo vệ dữ liệu
 
-Thông tin đăng nhập được nhập khi chạy; không đưa mật khẩu vào mã nguồn hoặc danh sách thiết bị. Bản sao lưu có thể chứa thông tin xác thực và cấu trúc mạng, vì vậy cần kiểm soát quyền truy cập và nơi lưu trữ.
+Thông tin đăng nhập lấy từ `.env`/biến môi trường hoặc nhập khi chạy tương tác; không đưa mật khẩu vào mã nguồn hoặc danh sách thiết bị. Backup mới được lọc secret để đọc/diff, không đủ để khôi phục đầy đủ thiết bị. Bộ lọc theo mẫu không nhận diện chắc chắn mọi bí mật. Backup và lịch sử Git cũ chưa được chỉnh sửa; cần kiểm tra trước khi chia sẻ.
 
 Các thư mục `backups/`, `config_history/`, `reports/`, `logs/` và các tệp bí mật được loại trừ qua `.gitignore`. Quy tắc này không loại bỏ dữ liệu đã được Git theo dõi từ trước; cần kiểm tra nội dung trước khi commit hoặc chia sẻ.
 
 ## Phạm vi và hướng phát triển
 
-Mô hình hiện tại tập trung vào hai router Cisco IOS trong GNS3. Bộ kiểm tra YAML chấp nhận `juniper_junos`, nhưng quy trình sao lưu vẫn sử dụng lệnh Cisco `show running-config`; cần bổ sung lệnh theo nền tảng trước khi sử dụng với Juniper.
+Mô hình thật hiện có hai Cisco IOS trong GNS3. Adapter Juniper đã dùng lệnh `show configuration | display set | no-more`, nhưng chưa kiểm thử Junos thật. Demo có ba thiết bị mẫu Cisco/Juniper và dữ liệu tách trong `demo/`.
 
 Các hướng phát triển dự kiến:
 
-- Lập lịch sao lưu và gửi thông báo kết quả.
-- Bổ sung giao diện quản trị và thống kê trạng thái thiết bị.
-- Mở rộng hỗ trợ nhiều nền tảng mạng với lệnh thu thập tương ứng.
-- Lọc các dòng cấu hình biến động và dữ liệu nhạy cảm.
+- Gửi cảnh báo kết quả và kiểm chứng trên nhiều image thiết bị thật.
+- Kho backup gốc mã hóa và khôi phục cấu hình.
 - Đánh giá hiệu năng với số lượng thiết bị lớn hơn và bổ sung quản lý bí mật.
 
 Mã nguồn được quản lý tại [GitHub của dự án](https://github.com/Jonny-Pak/network-config-backup-inventory); nhánh `develop` chứa các chức năng đã tích hợp.

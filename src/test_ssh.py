@@ -1,9 +1,15 @@
 
-from inventory import load_inventory
-from ssh_connector import get_credentials, execute_command
+from pathlib import Path
+import sys
+if __package__ in (None, ""):
+    sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
+from src.inventory import load_inventory
+from src.ssh_connector import get_credentials, execute_command
+from src.runtime import load_environment
 
 
 def main():
+    load_environment()
     devices = load_inventory()
     username, password = get_credentials()
 
@@ -26,7 +32,7 @@ def main():
             success += 1
 
         except Exception as error:
-            print(f"[FAILED] {name}: {error}")
+            print(f"[FAILED] {name}: {type(error).__name__}")
 
     print(f"\nKết quả: {success}/{len(devices)} thiết bị thành công")
 

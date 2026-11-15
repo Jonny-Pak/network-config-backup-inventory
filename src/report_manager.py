@@ -1,0 +1,57 @@
+
+import csv
+from datetime import datetime
+from pathlib import Path
+import json
+import os
+import tempfile
+
+
+def write_json(path, data):
+    """Publish a whole JSON document atomically for dashboard readers."""
+    path = Path(path)
+    path.parent.mkdir(parents=True, exist_ok=True)
+    temporary = None
+    try:
+        with tempfile.NamedTemporaryFile("w", dir=path.parent, encoding="utf-8", delete=False, suffix=".tmp") as file:
+            temporary = Path(file.name)
+            json.dump(data, file, ensure_ascii=False, indent=2)
+        os.replace(temporary, path)
+    finally:
+        if temporary and temporary.exists():
+            temporary.unlink()
+
+
+def export_csv_report(records, report_dir="reports"):
+    """Xuất báo cáo tổng hợp backup, thay đổi và Git."""
+
+    report_path = Path(report_dir)
+    report_path.mkdir(parents=True, exist_ok=True)
+
+    timestamp = datetime.now().strftime("%Y%m%d_%H%M%S_%f")
+    csv_file = report_path / f"network_report_{timestamp}.csv"
+
+    fieldnames = [
+        "Device",
+        "IP",
+        "Backup Status",
+        "Change Status",
+        "Git Status",
+        "Commit",
+        "Error"
+    ]
+
+    with csv_file.open(
+        "w",
+        newline="",
+        encoding="utf-8-sig"
+    ) as file:
+        writer = csv.DictWriter(
+            file,
+            fieldnames=fieldnames,
+            extrasaction="ignore"
+        )
+        writer.writeheader()
+        writer.writerows(records)
+
+    return csv_file

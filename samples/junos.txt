@@ -1,0 +1,5 @@
+set system host-name DEMO-JUNOS
+set system root-authentication encrypted-password "DEMO_ONLY_PASSWORD"
+set system services ssh
+set interfaces ge-0/0/0 description MANAGEMENT
+set interfaces ge-0/0/0 unit 0 family inet address 192.168.36.13/24

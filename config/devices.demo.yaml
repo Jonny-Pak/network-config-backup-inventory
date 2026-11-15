@@ -1,0 +1,10 @@
+devices:
+  - name: R1-CISCO
+    host: 192.168.36.11
+    device_type: cisco_ios
+  - name: R2-CISCO
+    host: 192.168.36.12
+    device_type: cisco_ios
+  - name: J1-JUNIPER
+    host: 192.168.36.13
+    device_type: juniper_junos

@@ -1,0 +1,11 @@
+Building configuration...
+Current configuration : 200 bytes
+version 15.2
+hostname DEMO-CISCO
+enable secret 5 DEMO_ONLY_ENABLE
+username backupuser privilege 15 secret 9 DEMO_ONLY_PASSWORD
+snmp-server community DEMO_ONLY_COMMUNITY RO
+interface GigabitEthernet0/0
+ description MANAGEMENT
+ ip address 192.168.36.11 255.255.255.0
+end
